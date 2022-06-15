@@ -81,11 +81,11 @@ velocityY = zeros(1,20);
 vX = zeros(1,20);
 vy = zeros(1,20);
 
-walkOri = 31.2234; // Valor Fixo provisoriamente
+walkOri = 31.2234; // Valor Fixo provisoriamente -0.92563
 
 //inicio do calculo
 
-for k = 1:20
+for b = 1:20
 
 //walkOri = (finalTargetX(k) - myPosX(k)) + (finalTargetY(k) - myPosY(k)); WalkOri começa com zero, ele recebe o valor que é o finalTarget - SuaPosição
 //Variaveis Para o calculo da velocidade
@@ -94,10 +94,10 @@ minVx = -0.5 * cos(walkOri);
 maxVy = 0.6 * sin(walkOri);
 minVy = -0.6 * sin(walkOri);
 
-[velocityX(k),velocityY(k)] = thetaToSpeed(maxVx,minVx,maxVy,minVy,walkOri);
+[velocityX(b),velocityY(b)] = thetaToSpeed(maxVx,minVx,maxVy,minVy,walkOri);
 
-vX(k) = k*(velocityX(k)); // Calculo da velocidade que vai para a função principal da caminhada
-vY(k) = k*(-1 * velocityY(k));
+vX(b) = k*(velocityX(b)); // Calculo da velocidade que vai para a função principal da caminhada
+vY(b) = k*(-1 * velocityY(b));
 
 
 end
@@ -119,13 +119,14 @@ end
  params_minDy = -0.005424;
  params_maxDx = params_minDx*-1;
  params_maxDy = params_minDy*-1;
+ deltaT = 0.002;
  
- dX = zeros(1,20); // No calculo normal dx, dy, inputdx e dy são doubles e não vetores
- dY = zeros(1,20); // Utilizei vetores aqui para simular varios calculos deles (ideia inicial, pode mudar)
- lastdX = zeros(1,20);
- lastdY = zeros(1,20);
- inputDX = zeros(1,20);
- inputDY = zeros(1,20);
+ dX = 0; // No calculo normal dx, dy, inputdx e dy são doubles e não vetores
+ dY = 0; // Utilizei vetores aqui para simular varios calculos deles (ideia inicial, pode mudar)
+ lastdX = 0;
+ lastdY = 0;
+ inputDX = 0;
+ inputDY = 0;
  
  // PlanedFoot e InitFoot inicialização das variaveis
  
@@ -144,46 +145,49 @@ end
  inicialLeftLeg = planedLeftFoot(1);
  inicialRightLeg = planedRightFoot(1);
  
- for t = 1:10 // Para o calculo do FootGenearotor é dito que só é utilizado os primeiros 6 planejados
+ 
+// Para o calculo do FootGenearotor é dito que só é utilizado os primeiros 6 planejados 
+
+// setWalkParameter
      
      Max_in_X = 0;
      Max_in_Y = 0;
      Min_in_X = 0;
      Min_in_Y = 0;
      
-     
-     
-     dX(t) =  vX(t)*params_period*params_dXmult; // Calculo da direção feita na função setOptParameter que foi chamada no AgentActions
-     dY(t) =  vY(t)*params_period*params_dXmult;
+     dX =  vX(1)*params_period*params_dXmult; // Calculo da direção feita na função setOptParameter que foi chamada no AgentActions
+     dY =  vY(1)*params_period*params_dXmult;
      
      //Emulando calculo da função setWalkParameter aqui, basicamente a função inputDX = lastDX+Max(Min(dX-lastDX,maxDx),minDx);
      
-     [Min_in_X]=MIN((dX(t) - lastdX(t)),params_maxDx); // Preciso definir primeiro os valores maximos e minimos em Dx e Dy 
+      sub1 = dX - lastdX;
+     
+     [Min_in_X]=MIN(sub1,params_maxDx); // Preciso definir primeiro os valores maximos e minimos em Dx e Dy 
      
      [Max_in_X] = MAX(Min_in_X,params_minDx); // Defino comparando com o padrão estabelecido pelo arquivo Po
      
-     [Min_in_Y]=MIN((dY(t) - lastdY(t)),params_maxDy); 
+      sub2 = dY - lastdY;
+     
+     [Min_in_Y]=MIN(sub2,params_maxDy); 
      
      [Max_in_Y] = MAX(Min_in_Y,params_minDy);
+          
+     inputDX = lastdX + Max_in_X; // Valor que vai para o footGenearator2
      
-     inputDX(t) = lastdX(t) + Max_in_X; // Valor que vai para o footGenearator2
+     inputDY = lastdY + Max_in_Y; 
      
-     inputDY(t) = lastdY(t) + Max_in_Y;
-     
-     
- end
 
 //Calculo do Foot Generator
 
 hL = struct('X',0,'Y',0.055); // Posição Das juntas do agente 
 hR = struct('X',0,'Y',-0.055);
-d = struct('stepX',inputDX,'stepY',inputDY)
+d = struct('stepX',inputDX,'stepY',inputDY);
 
 x = struct('X',0,'Y',0);
 com = struct('X',0,'Y',0);
 
 
-if (planedLeftFoot(1).Suporte & planedRightFoot(1).Suporte) then
+if (planedLeftFoot(1).Suporte == %T & planedRightFoot(1).Suporte == %T) then
     x.X = planedLeftFoot(1).Position.X - hL.X
     x.Y = planedLeftFoot(1).Position.Y - hL.Y
     planedLeftFoot(1).Suporte = %F;
@@ -207,7 +211,7 @@ end
      x.X=((com.X - x.X)*2) + x.X; // Com a posição dos pe de suporte x calculada podemos calcular uma projeção do proximo passo
      x.Y=((com.Y - x.Y)*2)+ x.Y;
      
-    if (planedLeftFoot(z-1).Suporte) then
+    if (planedLeftFoot(z-1).Suporte == %T) then
         newTheta = planedLeftFoot(z-1).Theta + stepTheta;
         pos = struct('X',0,'Y',0); // Nova posição a ser calculada
         pos.X = x.X + hL.X; 
@@ -221,7 +225,7 @@ end
         planedLeftFoot(z-1) = struct('Position',pos,'Suporte',%T,'Right',planedLeftFoot(z-1).Right,'Time',planedLeftFoot(z-1).Time+TimeStep,'        Theta',newTheta)
     end
     
-    if (planedRightFoot(z-1).Suporte) then
+    if (planedRightFoot(z-1).Suporte == %T) then
         newTheta = planedRightFoot(z-1).Theta + stepTheta;
         pos = struct('X',0,'Y',0); // Nova posição a ser calculada
         pos.X = x.X + hR.X; 
@@ -242,7 +246,7 @@ end
     maxLegSeperationX=legExtention;
     maxLegSeperationY=legExtention; // Valores importantes para que o agente saiba até onde ele pode levar o pé, seus limites fisicos
     
-    if (planedRightFoot(z).Suporte) then
+    if (planedRightFoot(z).Suporte == %T) then
         leftToRight = struct('X',0,'Y',0);
         leftToRight.X = planedRightFoot(z).Position.X - planedLeftFoot(z).Position.X;
         leftToRight.Y = planedRightFoot(z).Position.Y - planedLeftFoot(z).Position.Y;
@@ -257,7 +261,7 @@ end
         
     end
     
-    if (planedLeftFoot(z).Suporte) then
+    if (planedLeftFoot(z).Suporte == %T) then
         rightToLeft = struct('X',0,'Y',0);
         rightToLeft.X = planedLeftFoot(z).Position.X - planedRightFoot(z).Position.X;
         rightToLeft.Y = planedLeftFoot(z).Position.Y - planedRightFoot(z).Position.Y;
@@ -272,6 +276,55 @@ end
         
     end
     
+    lastdX = inputDX;
+    lastdY = inputDY;
+ end
+ 
+ /* // ZMPGENERATOR
+ // ZMPGENERATOR, Passos negativos Y 
+ 
+ zmpPosition = struct('X',0,'Y',0);
+ for g = 1:25
+   zmp(g) = struct('Position',zmpPosition,'Time',0); 
+ end
+ 
+ timeStep = planedRightFoot(2).Time - planedRightFoot(1).Time; // Dando zero em tudo
+ initSize = int((stepNumber+1)*(timeStep)/deltaT);
+ //ZMP *zmp= new ZMP[initSize+1000];
+ sizeZ = 0;
+ 
+  for a = 1:stepNumber
+      if (planedRightFoot(a).Suporte == %T & planedLeftFoot(a).Suporte == %T) then
+          sizeStep= int(timeStep/deltaT);
+          for i = 1:sizeStep
+            zmp((a*sizeStep)+i).Position.X = (planedRightFoot(i).Position.X + planedLeftFoot(i).Position.X)/2;
+            zmp((a*sizeStep)+i).Position.Y = 0;
+            zmp((a*sizeStep)+i).Time = (a*timeStep)+(i*deltaT);
+            sizeZ = sizeZ + 1;
+          end
+      
+      elseif(planedRightFoot(a).Suporte == %T) then 
+          sizeStep= int(timeStep/deltaT);
+          for i = 1:sizeStep
+            zmp((a*sizeStep)+i).Position.X = planedRightFoot(i).Position.X;
+            zmp((a*sizeStep)+i).Position.Y = planedRightFoot(i).Position.Y;
+            zmp((a*sizeStep)+i).Time = (a*timeStep)+(i*deltaT);
+          end
+          
+      elseif(planedLeftFoot(a).Suporte == %T) then 
+          sizeStep= int(timeStep/deltaT);
+          for i = 1:sizeStep
+            zmp((a*sizeStep)+i).Position.X = planedLeftFoot(i).Position.X;
+            zmp((a*sizeStep)+i).Position.Y = planedLeftFoot(i).Position.Y;
+            zmp((a*sizeStep)+i).Time = (a*timeStep)+(i*deltaT);
+          end
+      end
+           
+  end  
+ */
+ 
+ for f = 1:stepNumber // Plotar os passos planejados
+     plot(planedRightFoot(f).Position.X',"o");
  end
  
  
