@@ -65,6 +65,8 @@ function [A] = MIN(val1,val2)
         A = val2;
     end
 endfunction
+
+
 // Simulação do AGENTACTIONS
 
 //Declaração de variaveis vetores todos preenchidos com zero
@@ -107,7 +109,7 @@ end
  //Parametros da função footgenerator2 com valores constantes  
  stepTheta = 0; 
  stepNumber = 8; // Esses valores são definidos no arquivo P0 da caminhada, no codigo é 7 botei 8 pq no Scilab começa com 7
- TimeStep = 0.136988;
+ stepTime = 0.8;
  legSeparation = 0.11;
  legExtention = 0.200636;
  
@@ -130,20 +132,24 @@ end
  
  // PlanedFoot e InitFoot inicialização das variaveis
  
- PositionL = struct('X',0,'Y',0.055); // Posição inicial do foot em Right e Left
- PositionR = struct('X',0,'Y',-0.055);
+ PositionL = struct('X',0,'Y',0); // Posição inicial do foot em Right e Left
+ PositionR = struct('X',0,'Y',0);
  
- inicialLeftLeg = struct('Position',PositionL,'Suporte',%T,'Right',%F,'Time',0,'Theta',0); // %T e %F é True e False no Scilab
- inicialRightLeg = struct('Position',PositionR,'Suporte',%T,'Right',%F,'Time',0,'Theta',0); // 0.055 é o legSeparation / 2
+ InitPositionL = struct('X',0,'Y',0.055); // Posição inicial do foot em Right e Left
+ InitPositionR = struct('X',0,'Y',-0.055);
+ 
+ inicialLeftLeg = struct('Position',InitPositionL,'Suporte',%T,'Right',%F,'Time',0,'Theta',0); // %T e %F é True e False no Scilab
+ inicialRightLeg = struct('Position',InitPositionR,'Suporte',%T,'Right',%F,'Time',0,'Theta',0); // 0.055 é o legSeparation / 2
   
   for g = 1:25 // Inicializando um vetor de 25 passos planejados, como no codigo
     planedLeftFoot(g) = struct('Position',PositionL,'Suporte',%T,'Right',%F,'Time',0,'Theta',0);
     planedRightFoot(g) = struct('Position',PositionR,'Suporte',%T,'Right',%F,'Time',0,'Theta',0);
   end
 
-
- inicialLeftLeg = planedLeftFoot(1);
- inicialRightLeg = planedRightFoot(1);
+  planedLeftFoot(1) = inicialLeftLeg;
+  planedRightFoot(1) = inicialRightLeg;
+  planedLeftFoot(2) = inicialLeftLeg;
+  planedRightFoot(2) = inicialRightLeg;
  
  
 // Para o calculo do FootGenearotor é dito que só é utilizado os primeiros 6 planejados 
@@ -185,22 +191,23 @@ d = struct('stepX',inputDX,'stepY',inputDY);
 
 x = struct('X',0,'Y',0);
 com = struct('X',0,'Y',0);
+newTheta = 0; 
 
 
 if (planedLeftFoot(1).Suporte == %T & planedRightFoot(1).Suporte == %T) then
-    x.X = planedLeftFoot(1).Position.X - hL.X
-    x.Y = planedLeftFoot(1).Position.Y - hL.Y
+    x.X = planedLeftFoot(1).Position.X - hL.X;
+    x.Y = planedLeftFoot(1).Position.Y - hL.Y;
     planedLeftFoot(1).Suporte = %F;
 end
 
 if (~planedLeftFoot(1).Suporte) then
-    x.X = planedLeftFoot(1).Position.X - hL.X
-    x.Y = planedLeftFoot(1).Position.Y - hL.Y
+    x.X = planedLeftFoot(1).Position.X - hL.X;
+    x.Y = planedLeftFoot(1).Position.Y - hL.Y;
 end
 
 if (~planedRightFoot(1).Suporte) then
-    x.X = planedRightFoot(1).Position.X - hL.X
-    x.Y = planedRightFoot(1).Position.Y - hL.Y
+    x.X = planedRightFoot(1).Position.X - hL.X;
+    x.Y = planedRightFoot(1).Position.Y - hL.Y;
 end
 
 
@@ -216,13 +223,13 @@ end
         pos = struct('X',0,'Y',0); // Nova posição a ser calculada
         pos.X = x.X + hL.X; 
         pos.Y = x.Y + hL.Y;
-        planedLeftFoot(z-1) = struct('Position',pos,'Suporte',%F,'Right',planedLeftFoot(z-1).Right,'Time',planedLeftFoot(z-1).Time+TimeStep,'        Theta',newTheta)
+        planedLeftFoot(z) = struct('Position',pos,'Suporte',%F,'Right',planedLeftFoot(z-1).Right,'Time',planedLeftFoot(z-1).Time+stepTime,'        Theta',newTheta);
     else 
         newTheta = planedLeftFoot(z-1).Theta + stepTheta;
         pos = struct('X',0,'Y',0); 
         pos.X = planedLeftFoot(z-1).Position.X;
         pos.Y = planedLeftFoot(z-1).Position.Y;
-        planedLeftFoot(z-1) = struct('Position',pos,'Suporte',%T,'Right',planedLeftFoot(z-1).Right,'Time',planedLeftFoot(z-1).Time+TimeStep,'        Theta',newTheta)
+        planedLeftFoot(z) = struct('Position',pos,'Suporte',%T,'Right',planedLeftFoot(z-1).Right,'Time',planedLeftFoot(z-1).Time+stepTime,'        Theta',newTheta);
     end
     
     if (planedRightFoot(z-1).Suporte == %T) then
@@ -230,23 +237,23 @@ end
         pos = struct('X',0,'Y',0); // Nova posição a ser calculada
         pos.X = x.X + hR.X; 
         pos.Y = x.Y + hR.Y;
-        planedRightFoot(z-1) = struct('Position',pos,'Suporte',%F,'Right',planedRightFoot(z-1).Right,'Time',planedRightFoot(z-1).Time+TimeStep,'        Theta',newTheta);
+        planedRightFoot(z) = struct('Position',pos,'Suporte',%F,'Right',planedRightFoot(z-1).Right,'Time',planedRightFoot(z-1).Time+stepTime,'        Theta',newTheta);
     else
         newTheta = planedRightFoot(z-1).Theta + stepTheta;
         pos = struct('X',0,'Y',0); 
         pos.X = planedRightFoot(z-1).Position.X; 
         pos.Y = planedRightFoot(z-1).Position.Y; 
-        planedRightFoot(z-1) = struct('Position',pos,'Suporte',%T,'Right',planedRightFoot(z-1).Right,'Time',planedRightFoot(z-1).Time+TimeStep,'        Theta',newTheta)    
+        planedRightFoot(z) = struct('Position',pos,'Suporte',%T,'Right',planedRightFoot(z-1).Right,'Time',planedRightFoot(z-1).Time+stepTime,'        Theta',newTheta);   
     end
     
     
     //Ajustes nas posições calculadas de acordo com os limites pré definidos, definindo o tamanho do passo
     
     minLegSperationY=0.08;//0.055;
-    maxLegSeperationX=legExtention;
-    maxLegSeperationY=legExtention; // Valores importantes para que o agente saiba até onde ele pode levar o pé, seus limites fisicos
+    maxLegSeperationX = legExtention;
+    maxLegSeperationY = legExtention; // Valores importantes para que o agente saiba até onde ele pode levar o pé, seus limites fisicos
     
-    if (planedRightFoot(z).Suporte == %T) then
+    if (planedRightFoot(z).Suporte == %F) then
         leftToRight = struct('X',0,'Y',0);
         leftToRight.X = planedRightFoot(z).Position.X - planedLeftFoot(z).Position.X;
         leftToRight.Y = planedRightFoot(z).Position.Y - planedLeftFoot(z).Position.Y;
@@ -261,7 +268,7 @@ end
         
     end
     
-    if (planedLeftFoot(z).Suporte == %T) then
+    if (planedLeftFoot(z).Suporte == %F) then
         rightToLeft = struct('X',0,'Y',0);
         rightToLeft.X = planedLeftFoot(z).Position.X - planedRightFoot(z).Position.X;
         rightToLeft.Y = planedLeftFoot(z).Position.Y - planedRightFoot(z).Position.Y;
@@ -280,51 +287,75 @@ end
     lastdY = inputDY;
  end
  
- /* // ZMPGENERATOR
+ 
  // ZMPGENERATOR, Passos negativos Y 
  
+ timeStep = planedRightFoot(2).Time - planedRightFoot(1).Time; 
+ initSize = int((stepNumber+1)*(timeStep)/deltaT);
  zmpPosition = struct('X',0,'Y',0);
- for g = 1:25
+ zmpValue = initSize+1000; //ZMP *zmp= new ZMP[initSize+1000];
+ 
+ for g = 1:zmpValue
    zmp(g) = struct('Position',zmpPosition,'Time',0); 
  end
  
- timeStep = planedRightFoot(2).Time - planedRightFoot(1).Time; // Dando zero em tudo
- initSize = int((stepNumber+1)*(timeStep)/deltaT);
- //ZMP *zmp= new ZMP[initSize+1000];
+ //zmp = zeros(1,initSize+1000); // zeros(1,20);
  sizeZ = 0;
+ sizeStep = 0;
  
+// Gerando valores no ZMP que se mantem constante a cada ciclo de 68 posições que é igual ao valor de SizeStep
   for a = 1:stepNumber
       if (planedRightFoot(a).Suporte == %T & planedLeftFoot(a).Suporte == %T) then
-          sizeStep= int(timeStep/deltaT);
+          sizeStep = int(timeStep/deltaT);
           for i = 1:sizeStep
-            zmp((a*sizeStep)+i).Position.X = (planedRightFoot(i).Position.X + planedLeftFoot(i).Position.X)/2;
+            zmp((a*sizeStep)+i).Position.X = (planedRightFoot(a).Position.X + planedLeftFoot(a).Position.X)/2;
             zmp((a*sizeStep)+i).Position.Y = 0;
             zmp((a*sizeStep)+i).Time = (a*timeStep)+(i*deltaT);
             sizeZ = sizeZ + 1;
           end
       
       elseif(planedRightFoot(a).Suporte == %T) then 
-          sizeStep= int(timeStep/deltaT);
+          sizeStep = int(timeStep/deltaT);
           for i = 1:sizeStep
-            zmp((a*sizeStep)+i).Position.X = planedRightFoot(i).Position.X;
-            zmp((a*sizeStep)+i).Position.Y = planedRightFoot(i).Position.Y;
+            zmp((a*sizeStep)+i).Position.X = planedRightFoot(a).Position.X;
+            zmp((a*sizeStep)+i).Position.Y = planedRightFoot(a).Position.Y;
             zmp((a*sizeStep)+i).Time = (a*timeStep)+(i*deltaT);
+            sizeZ = sizeZ + 1;
           end
           
       elseif(planedLeftFoot(a).Suporte == %T) then 
-          sizeStep= int(timeStep/deltaT);
+          sizeStep = int(timeStep/deltaT);
           for i = 1:sizeStep
-            zmp((a*sizeStep)+i).Position.X = planedLeftFoot(i).Position.X;
-            zmp((a*sizeStep)+i).Position.Y = planedLeftFoot(i).Position.Y;
+            zmp((a*sizeStep)+i).Position.X = planedLeftFoot(a).Position.X;
+            zmp((a*sizeStep)+i).Position.Y = planedLeftFoot(a).Position.Y;
             zmp((a*sizeStep)+i).Time = (a*timeStep)+(i*deltaT);
+            sizeZ = sizeZ + 1;
           end
       end
            
   end  
- */
+
+
+// Calculo do CoM Vertical verticalCoMTrajectoryFW
+
+B0 = 0.187;  // Valores de Beta, esses valores devem ser treinados para se obter os melhores 
+B1 = -0.0025;  // Para a caminhada, Eles são os valores de amplitude da trajetoria da altura do quadril 
+B2 =  0.0008; 
+
+M_PI = 3.14159265358979323846;
+
+forierFastWalk = 0; 
+
+forierFastWalk = B0 + B1 * cos(2 * M_PI/stepTime) + B2 * cos(4 * M_PI/stepTime);
+
  
  for f = 1:stepNumber // Plotar os passos planejados
-     plot(planedRightFoot(f).Position.X',"o");
+     plot(planedRightFoot(f).Position.X,"o");
+     plot(planedLeftFoot(f).Position.X,"ro");
+         
+     hl=legend(['Rx';'Lx']);
+     
+    //plot(zmp(f).Position.X, "o");
  end
  
  
